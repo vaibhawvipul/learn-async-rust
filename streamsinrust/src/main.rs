@@ -42,6 +42,8 @@
 // Some definitions
 // Future: A future is a value that represents an asynchronous computation that will eventually produce a value or an error. It is a type of promise that can be used to represent the result of an asynchronous computation.
 
+// Promise: A promise is a value that represents the result of an asynchronous computation. It is used to represent the eventual result of an asynchronous computation, such as a network request or a file read.
+
 // Poll: The poll method is used to check if a future has completed. It returns a Poll enum, which can be one of three variants: Read or Pending.
 // enum Poll<T> {
 //     Ready(T),
@@ -82,4 +84,46 @@ async fn assert_stream() {
         res
     });
     assert_eq!(add_one.take(5).collect::<Vec<_>>().await, vec![1,2,4,8,16]);
+
+    // Combine two streams into one
+    let stream1 = stream::iter(vec![1,2,3]);
+    let stream2 = stream::iter(vec![4,5,6]);
+    let combined = stream1.chain(stream2);
+    assert_eq!(combined.collect::<Vec<_>>().await, vec![1,2,3,4,5,6]);
+
+    // unfold is a function that creates a stream from an initial state and a closure that generates the next value and state
+    let curr = 1;
+    let unfold = stream::unfold(curr, |state| async move {
+        if state < 10 {
+            let next_state = state + 1;
+            let next_value = state * 2;
+            Some((next_value, next_state))
+        } else {
+            None
+        }
+    });
+    assert_eq!(unfold.collect::<Vec<_>>().await, vec![2,4,6,8,10,12,14,16,18]);
+
+    // difference between repeat_with and unfold
+    // repeat_with is a stream that produces the same value over and over again, while unfold is a stream that produces a sequence of values based on an initial state and a closure that generates the next value and state.
+
+    // zip is a function that combines two streams into one, producing a stream of pairs
+    let stream1 = stream::iter(vec![1,2,3]);
+    let stream2 = stream::iter(vec![4,5,6]);
+    let zipped = stream1.zip(stream2);
+    assert_eq!(zipped.collect::<Vec<_>>().await, vec![(1,4), (2,5), (3,6)]);
+
+    // streams vs fused streams
+    // A fused stream is a stream that has been exhausted, and will always return None when polled. This is useful when you want to create a stream that is done producing values, but you still want to return a stream instead of an iterator.
+
+    // Fuse a stream such that poll_next will never again be called once it has finished. This method can be used to turn any Stream into a FusedStream.
+    // Normally, once a stream has returned None from poll_next any further calls could exhibit bad behavior such as block forever, panic, never return, etc.
+
+    // fused stream example
+    let mut stream = stream::iter(vec![1,2,3]).fuse();
+    assert_eq!(stream.next().await, Some(1));
+    assert_eq!(stream.next().await, Some(2));
+    assert_eq!(stream.next().await, Some(3));
+    assert_eq!(stream.next().await, None);
+    assert_eq!(stream.next().await, None);
 }
