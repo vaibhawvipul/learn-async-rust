@@ -73,4 +73,13 @@ async fn assert_stream() {
     let stream = stream::iter(vec![1,2,3,4,5]);
     // Stream::iter is useful for tests, when you don’t care about the async/await stuff, and are only interested in the stream of values.
     assert_eq!(stream.collect::<Vec<_>>().await, vec![1,2,3,4,5]);
+
+    // lazily generate an infinite stream of numbers using repeat_with
+    let mut curr = 1;
+    let add_one = stream::repeat_with(move || {
+        let res = curr;
+        curr *= 2;
+        res
+    });
+    assert_eq!(add_one.take(5).collect::<Vec<_>>().await, vec![1,2,4,8,16]);
 }
